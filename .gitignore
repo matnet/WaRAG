@@ -1,0 +1,20 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+
+# Environment & secrets
+.env
+.env.*
+*.pem
+*.key
+
+# OS / editor cruft
+.DS_Store
+.idea/
+.vscode/
+
+# RAG runtime artefacts
+temp-files/
+whatsapp-sessions/

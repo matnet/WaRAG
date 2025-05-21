@@ -1,0 +1,223 @@
+from flask import Flask, request, jsonify
+import os
+from datetime import datetime
+from langchain.vectorstores import Chroma
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import RetrievalQA
+from langchain.prompts import PromptTemplate
+from langchain.docstore.document import Document
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+app = Flask(__name__)
+
+# Initialize OpenAI embeddings
+embeddings = OpenAIEmbeddings(
+    openai_api_key=os.getenv("OPENAI_API_KEY")
+)
+
+# Create directories for the vector database
+if not os.path.exists("./chroma_db"):
+    os.makedirs("./chroma_db")
+
+# Initialize vector store
+vector_store = Chroma(
+    collection_name="whatsapp_messages",
+    embedding_function=embeddings,
+    persist_directory="./chroma_db"
+)
+
+def format_datetime(timestamp):
+    """Convert timestamp to readable format"""
+    if isinstance(timestamp, int):
+        return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    return timestamp
+
+@app.route('/')
+def index():
+    """Root route to provide API documentation and status"""
+    return '''
+    <html>
+        <head>
+            <title>WhatsApp RAG API</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }
+                h1 {
+                    color: #075e54;
+                }
+                .endpoint {
+                    background-color: #f3f3f3;
+                    padding: 10px;
+                    margin: 10px 0;
+                    border-radius: 5px;
+                }
+                pre {
+                    background-color: #e5e5e5;
+                    padding: 10px;
+                    overflow: auto;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>WhatsApp RAG API</h1>
+            <p>This API provides endpoints for storing WhatsApp messages and querying the RAG system.</p>
+            
+            <div class="endpoint">
+                <h2>Store Message</h2>
+                <p><strong>Endpoint:</strong> POST /store-message</p>
+                <p><strong>Example Request:</strong></p>
+                <pre>
+curl -X POST http://localhost:5001/store-message \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "messageId": "test123",
+    "sender": "123456789@s.whatsapp.net",
+    "senderName": "John Doe",
+    "content": "Hello, this is a test message",
+    "timestamp": 1620000000,
+    "isGroup": false
+}'</pre>
+            </div>
+            
+            <div class="endpoint">
+                <h2>Query RAG</h2>
+                <p><strong>Endpoint:</strong> POST /query-rag</p>
+                <p><strong>Example Request:</strong></p>
+                <pre>
+curl -X POST http://localhost:5001/query-rag \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "query": "What did John say yesterday?"
+}'</pre>
+            </div>
+            
+            <p>API Status: <strong style="color: green">Running</strong></p>
+        </body>
+    </html>
+    '''
+
+@app.route('/store-message', methods=['POST'])
+def store_message():
+    """API endpoint to store WhatsApp messages in the vector database"""
+    try:
+        data = request.json
+        
+        # Extract message data
+        message_id = data.get('messageId', 'unknown_id')
+        sender = data.get('sender', 'unknown_sender')
+        sender_name = data.get('senderName', 'Unknown')
+        content = data.get('content', '')
+        timestamp = data.get('timestamp', datetime.now().timestamp())
+        is_group = data.get('isGroup', False)
+        
+        # Prepare metadata for the document
+        metadata = {
+            "source": "whatsapp",
+            "message_id": message_id,
+            "sender": sender,
+            "sender_name": sender_name,
+            "timestamp": timestamp,
+            "datetime": format_datetime(timestamp),
+            "is_group": is_group
+        }
+        
+        # Create document
+        doc = Document(page_content=content, metadata=metadata)
+        
+        # Add to vector store
+        vector_store.add_documents([doc])
+        vector_store.persist()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Successfully stored message {message_id}"
+        })
+    
+    except Exception as e:
+        app.logger.error(f"Error storing message: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/query-rag', methods=['POST'])
+def query_rag():
+    """API endpoint to query the RAG system"""
+    try:
+        data = request.json
+        query = data.get('query', '')
+        
+        if not query:
+            return jsonify({
+                "success": False,
+                "error": "No query provided"
+            }), 400
+        
+        # Create ChatOpenAI instance
+        llm = ChatOpenAI(
+            model_name="gpt-3.5-turbo",  # or "gpt-4" if you have access
+            temperature=0.7,
+            openai_api_key=os.getenv("OPENAI_API_KEY")
+        )
+        
+        # Create custom prompt template
+        prompt_template = """
+        Answer the following question based on the provided WhatsApp conversation context.
+        
+        Context:
+        {context}
+        
+        Question: {question}
+        
+        Provide a concise answer based only on the information in the context. If the context doesn't contain the answer, say "I don't have information about that in the conversation history."
+        """
+        
+        PROMPT = PromptTemplate(
+            template=prompt_template,
+            input_variables=["context", "question"]
+        )
+        
+        # Create retrieval chain
+        qa_chain = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type="stuff",
+            retriever=vector_store.as_retriever(search_kwargs={"k": 5}),
+            chain_type_kwargs={"prompt": PROMPT}
+        )
+        
+        # Get response
+        response = qa_chain({"query": query})
+        answer = response['result'] if 'result' in response else "I couldn't find an answer to your question."
+        
+        return jsonify({
+            "success": True,
+            "answer": answer
+        })
+    
+    except Exception as e:
+        app.logger.error(f"Error processing query: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Simple health check endpoint"""
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat()
+    })
+
+if __name__ == '__main__':
+    # Use port 5001 to avoid conflicts
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host='0.0.0.0', port=port, debug=True)

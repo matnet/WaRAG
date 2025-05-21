@@ -1,0 +1,28 @@
+import pypdf
+from langchain.docstore.document import Document
+
+def extract_text_from_pdf(pdf_path):
+    """Extract text from PDF using pypdf directly."""
+    documents = []
+    
+    try:
+        with open(pdf_path, 'rb') as file:
+            pdf_reader = pypdf.PdfReader(file)
+            
+            for page_num in range(len(pdf_reader.pages)):
+                page = pdf_reader.pages[page_num]
+                text = page.extract_text()
+                
+                if text.strip():
+                    # Create a Document object compatible with langchain
+                    doc = Document(
+                        page_content=text,
+                        metadata={"page": page_num + 1, "source": pdf_path}
+                    )
+                    documents.append(doc)
+    
+    except Exception as e:
+        print(f"Error extracting text from PDF: {e}")
+        return []
+    
+    return documents
