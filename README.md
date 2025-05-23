@@ -1,5 +1,5 @@
 # WaRAG  🚀 🤖📱  
-*A WhatsApp bot that uses Retrieval‑Augmented Generation (RAG) to answer your questions from private knowledge bases.*
+*A WhatsApp bot that ingests chat messages, PDFs, DOCX, and other files, builds a Retrieval‑Augmented Generation (RAG) knowledge base, and answers your questions with cited context.*
 
 ![Node.js](https://img.shields.io/badge/node-%3E%3D20.x-green?logo=node.js)
 ![License](https://img.shields.io/badge/license-MIT-blue)
