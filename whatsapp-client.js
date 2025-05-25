@@ -16,7 +16,7 @@ dotenv.config();
 const RAG_API_URL = process.env.RAG_API_URL || 'http://localhost:5001';
 const SESSION_DIR = './whatsapp-sessions';
 const TEMP_DIR = './temp-files';
-const WELFARE_NOTIFY_JID = '60193846574@s.whatsapp.net'; // Nombor untuk pemberitahuan kebajikan
+const WELFARE_NOTIFY_JID = '6012345678@s.whatsapp.net'; // Nombor untuk pemberitahuan kebajikan
 
 // Debug: Print configuration
 console.log(`Using RAG API URL: ${RAG_API_URL}`);
