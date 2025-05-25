@@ -299,20 +299,30 @@ def query_rag():
         
         # Create custom prompt template
         prompt_template = """
-        Answer the following question based on the provided context from WhatsApp messages and documents.
-        
-        Context:
-        {context}
-        
-        Question: {question}
-        
-        Provide a concise and helpful answer based only on the information in the context. 
-        If the context doesn't contain the answer, say "I don't have information about that in the conversation or document history."
-        
-        If the answer comes from a document, mention the document name in your response.
-        If multiple sources provide relevant information, synthesize the information from all relevant sources.
-        
-        Format your response in a clear, readable way.
+        ## MAKLUMAT YANG DIPEROLEHI (RETRIEVED CONTEXT):
+{context}
+
+## SOALAN:
+{question}
+
+## ARAHAN JAWAPAN:
+1. Jawab HANYA berdasarkan maklumat dalam konteks di atas.
+2. Jika maklumat berkaitan TIADA dalam konteks, jawab: 
+   "Maaf, saya tidak mempunyai maklumat tersebut dalam mesej WhatsApp atau dokumen yang saya ada akses."
+3. Jangan cipta jawapan, jangan meneka, dan JANGAN gunakan pengetahuan luar.
+4. Jika maklumat diperoleh dari mesej WhatsApp, nyatakan pengirim dan masa.
+5. Jika maklumat diperoleh dari dokumen, nyatakan nama dokumen dan nombor halaman (jika ada).
+6. Jika maklumat dari beberapa sumber, gabungkan dan rangkumkan jawapan dengan jelas.
+7. Jika soalan terlalu umum atau di luar skop, berikan jawapan umum tanpa bergantung pada context RAG.
+8. Guna Bahasa Melayu Malaysia yang jelas, profesional dan mudah difahami.
+9. Mulakan jawapan dengan ayat terus menjawab soalan, kemudian berikan sokongan/rujukan daripada konteks.
+
+## FORMAT JAWAPAN:
+- Jawapan terus kepada soalan.
+- Nyatakan sumber (nama pengirim, masa, nama dokumen, nombor halaman jika ada).
+- Berikan maklumat tambahan dari konteks, jika perlu.
+- Jika tiada maklumat, gunakan ayat no.2 di atas.
+
         """
         
         PROMPT = PromptTemplate(
