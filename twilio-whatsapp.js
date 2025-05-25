@@ -15,7 +15,7 @@ const RAG_API_URL = process.env.RAG_API_URL || 'http://localhost:5001';
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER; // Should be in format: whatsapp:+14155238886
-const WELFARE_NOTIFY_NUMBER = process.env.WELFARE_NOTIFY_NUMBER || 'whatsapp:+60193846574';
+const WELFARE_NOTIFY_NUMBER = process.env.WELFARE_NOTIFY_NUMBER || 'whatsapp:+60123456789';
 const TEMP_DIR = './temp-files';
 
 // Verify required environment variables
